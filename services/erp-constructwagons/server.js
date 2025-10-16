@@ -1,8 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { initDatabase } = require('../../shared/database');
-const { subscribeToTopic, sendMessage } = require('../../shared/kafka');
+const { initDatabase } = require('/app/shared/database');
+const { subscribeToMultipleTopics, sendMessage } = require('/app/shared/kafka');
 
 const authRoutes = require('./routes/auth');
 const orderRoutes = require('./routes/orders');
@@ -23,33 +23,39 @@ app.get('/api/health', (req, res) => {
 const initializeService = async () => {
   await initDatabase();
   
-  subscribeToTopic('order.quote', async (message) => {
-    if (message.to === 'ConstructWagons') {
-      const { query } = require('../../shared/database');
-      await query(
-        'UPDATE orders SET status = $1, estimated_cost = $2, estimated_delivery = $3 WHERE external_order_id = $4',
-        ['quoted', message.estimatedCost, message.estimatedDelivery, message.orderId]
-      );
-      await query(
-        'INSERT INTO messages (topic, payload, direction) VALUES ($1, $2, $3)',
-        ['order.quote', message, 'in']
-      );
+  const handlers = {
+    'order.quote': async (message) => {
+      if (message.to === 'ConstructWagons') {
+        const { query } = require('/app/shared/database');
+        await query(
+          'UPDATE orders SET status = $1, estimated_cost = $2, estimated_delivery = $3 WHERE external_order_id = $4',
+          ['quoted', message.estimatedCost, message.estimatedDelivery, message.orderId]
+        );
+        await query(
+          'INSERT INTO messages (topic, payload, direction) VALUES ($1, $2, $3)',
+          ['order.quote', message, 'in']
+        );
+        console.log(`✅ Received quote for order ${message.orderId}`);
+      }
+    },
+    
+    'order.status.update': async (message) => {
+      if (message.to === 'ConstructWagons') {
+        const { query } = require('/app/shared/database');
+        await query(
+          'UPDATE orders SET status = $1 WHERE external_order_id = $2',
+          [message.status, message.orderId]
+        );
+        await query(
+          'INSERT INTO messages (topic, payload, direction) VALUES ($1, $2, $3)',
+          ['order.status.update', message, 'in']
+        );
+        console.log(`✅ Order ${message.orderId} status updated to ${message.status}`);
+      }
     }
-  });
+  };
 
-  subscribeToTopic('order.status.update', async (message) => {
-    if (message.to === 'ConstructWagons') {
-      const { query } = require('../../shared/database');
-      await query(
-        'UPDATE orders SET status = $1 WHERE external_order_id = $2',
-        [message.status, message.orderId]
-      );
-      await query(
-        'INSERT INTO messages (topic, payload, direction) VALUES ($1, $2, $3)',
-        ['order.status.update', message, 'in']
-      );
-    }
-  });
+  await subscribeToMultipleTopics(handlers);
 
   console.log('ConstructWagons ERP service initialized');
 };

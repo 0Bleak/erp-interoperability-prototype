@@ -8,11 +8,17 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
+    healthcheck:
+      test: echo stat | nc localhost 2181
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   kafka:
     image: confluentinc/cp-kafka:7.4.0
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
     ports:
       - "9092:9092"
     environment:
@@ -23,11 +29,17 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: kafka-broker-api-versions --bootstrap-server=localhost:9092
+      interval: 10s
+      timeout: 10s
+      retries: 5
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     ports:
       - "8080:8080"
     environment:
@@ -46,6 +58,11 @@ services:
     volumes:
       - db_data_wagonlits:/var/lib/postgresql/data
       - ./shared/scripts/init-databases.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d wagonlits"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   db-devmateriels:
     image: postgres:13
@@ -58,6 +75,11 @@ services:
     volumes:
       - db_data_devmateriels:/var/lib/postgresql/data
       - ./shared/scripts/init-databases.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d devmateriels"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   db-constructwagons:
     image: postgres:13
@@ -70,6 +92,11 @@ services:
     volumes:
       - db_data_constructwagons:/var/lib/postgresql/data
       - ./shared/scripts/init-databases.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d constructwagons"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   erp-wagonlits:
     build: 
@@ -88,8 +115,16 @@ services:
       - JWT_SECRET=your_jwt_secret_key_here
       - COMPANY=WagonLits
     depends_on:
-      - db-wagonlits
-      - kafka
+      db-wagonlits:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   erp-devmateriels:
     build:
@@ -108,8 +143,16 @@ services:
       - JWT_SECRET=your_jwt_secret_key_here
       - COMPANY=DevMateriels
     depends_on:
-      - db-devmateriels
-      - kafka
+      db-devmateriels:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   erp-constructwagons:
     build:
@@ -128,8 +171,16 @@ services:
       - JWT_SECRET=your_jwt_secret_key_here
       - COMPANY=ConstructWagons
     depends_on:
-      - db-constructwagons
-      - kafka
+      db-constructwagons:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   db_data_wagonlits:

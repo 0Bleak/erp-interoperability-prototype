@@ -21,6 +21,7 @@ WAGONLITS_TOKEN=""
 DEVMATERIELS_TOKEN=""
 CONSTRUCTWAGONS_TOKEN=""
 ORDER_ID=""
+DEVMATERIELS_ORDER_ID=""
 
 # Function to print status
 print_status() {
@@ -122,7 +123,7 @@ test_order_flow() {
     
     echo "$ORDER_RESPONSE" | grep -q "order"
     print_status "WagonLits created order"
-    ORDER_ID=$(echo "$ORDER_RESPONSE" | grep -o '"id":[0-9]*' | cut -d':' -f2)
+    ORDER_ID=$(echo "$ORDER_RESPONSE" | grep -o '"id":[0-9]*' | head -1 | cut -d':' -f2)
     echo -e "${GREEN}Order ID: $ORDER_ID${NC}"
     
     # Wait for Kafka message to be processed
@@ -135,9 +136,13 @@ test_order_flow() {
     echo "$DEVMATERIELS_ORDERS" | grep -q "Brake system failure"
     print_status "DevMateriels has the order in database"
     
+    # Get the DevMateriels order ID
+    DEVMATERIELS_ORDER_ID=$(echo "$DEVMATERIELS_ORDERS" | grep -o '"id":[0-9]*' | tail -1 | cut -d':' -f2)
+    echo -e "${GREEN}DevMateriels Order ID: $DEVMATERIELS_ORDER_ID${NC}"
+    
     # Step 3: DevMateriels sends quote
     echo -e "${YELLOW}Step 3: DevMateriels → WagonLits (order.quote)${NC}"
-    QUOTE_RESPONSE=$(curl -s -X POST "$DEVMATERIELS_URL/api/orders/1/quote" \
+    QUOTE_RESPONSE=$(curl -s -X POST "$DEVMATERIELS_URL/api/orders/$DEVMATERIELS_ORDER_ID/quote" \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer $DEVMATERIELS_TOKEN" \
         -d '{
@@ -171,13 +176,13 @@ test_order_flow() {
     
     # Step 6: Check if DevMateriels received confirmation
     echo -e "${YELLOW}Step 6: Verify DevMateriels received confirmation${NC}"
-    DEVMATERIELS_ORDER=$(curl -s -H "Authorization: Bearer $DEVMATERIELS_TOKEN" "$DEVMATERIELS_URL/api/orders/1")
+    DEVMATERIELS_ORDER=$(curl -s -H "Authorization: Bearer $DEVMATERIELS_TOKEN" "$DEVMATERIELS_URL/api/orders/$DEVMATERIELS_ORDER_ID")
     echo "$DEVMATERIELS_ORDER" | grep -q "confirmed"
     print_status "DevMateriels order status updated to 'confirmed'"
     
     # Step 7: DevMateriels completes order
     echo -e "${YELLOW}Step 7: DevMateriels → WagonLits (order.status.update)${NC}"
-    COMPLETE_RESPONSE=$(curl -s -X POST "$DEVMATERIELS_URL/api/orders/1/complete" \
+    COMPLETE_RESPONSE=$(curl -s -X POST "$DEVMATERIELS_URL/api/orders/$DEVMATERIELS_ORDER_ID/complete" \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer $DEVMATERIELS_TOKEN")
     
@@ -247,8 +252,11 @@ test_role_based_access() {
     
     TECH_TOKEN=$(echo "$TECH_RESPONSE" | grep -o '"token":"[^"]*' | cut -d'"' -f4)
     
+    # Get latest DevMateriels order for technician test
+    LATEST_DM_ORDER=$(curl -s -H "Authorization: Bearer $TECH_TOKEN" "$DEVMATERIELS_URL/api/orders" | grep -o '"id":[0-9]*' | head -1 | cut -d':' -f2)
+    
     # Technician should be able to complete orders
-    TECH_COMPLETE_RESPONSE=$(curl -s -X POST "$DEVMATERIELS_URL/api/orders/1/complete" \
+    TECH_COMPLETE_RESPONSE=$(curl -s -X POST "$DEVMATERIELS_URL/api/orders/$LATEST_DM_ORDER/complete" \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer $TECH_TOKEN")
     

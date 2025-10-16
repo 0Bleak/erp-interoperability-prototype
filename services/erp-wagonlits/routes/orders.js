@@ -1,7 +1,7 @@
 const express = require('express');
-const { query } = require('../../../shared/database');
-const { authMiddleware, roleMiddleware } = require('../../../shared/auth');
-const { sendMessage } = require('../../../shared/kafka');
+const { query } = require('/app/shared/database');
+const { authMiddleware, roleMiddleware } = require('/app/shared/auth');
+const { sendMessage } = require('/app/shared/kafka');
 
 const router = express.Router();
 
