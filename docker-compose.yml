@@ -1,0 +1,137 @@
+version: "3.8"
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    depends_on:
+      - kafka
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+
+  db-wagonlits:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: wagonlits
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data_wagonlits:/var/lib/postgresql/data
+      - ./shared/scripts/init-databases.sql:/docker-entrypoint-initdb.d/init.sql
+
+  db-devmateriels:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: devmateriels
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5433:5432"
+    volumes:
+      - db_data_devmateriels:/var/lib/postgresql/data
+      - ./shared/scripts/init-databases.sql:/docker-entrypoint-initdb.d/init.sql
+
+  db-constructwagons:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: constructwagons
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5434:5432"
+    volumes:
+      - db_data_constructwagons:/var/lib/postgresql/data
+      - ./shared/scripts/init-databases.sql:/docker-entrypoint-initdb.d/init.sql
+
+  erp-wagonlits:
+    build: 
+      context: .
+      dockerfile: services/erp-wagonlits/Dockerfile
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=db-wagonlits
+      - DB_PORT=5432
+      - DB_NAME=wagonlits
+      - DB_USER=admin
+      - DB_PASSWORD=password
+      - KAFKA_BROKER=kafka:29092
+      - JWT_SECRET=your_jwt_secret_key_here
+      - COMPANY=WagonLits
+    depends_on:
+      - db-wagonlits
+      - kafka
+
+  erp-devmateriels:
+    build:
+      context: .
+      dockerfile: services/erp-devmateriels/Dockerfile
+    ports:
+      - "3002:3000"
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=db-devmateriels
+      - DB_PORT=5432
+      - DB_NAME=devmateriels
+      - DB_USER=admin
+      - DB_PASSWORD=password
+      - KAFKA_BROKER=kafka:29092
+      - JWT_SECRET=your_jwt_secret_key_here
+      - COMPANY=DevMateriels
+    depends_on:
+      - db-devmateriels
+      - kafka
+
+  erp-constructwagons:
+    build:
+      context: .
+      dockerfile: services/erp-constructwagons/Dockerfile
+    ports:
+      - "3003:3000"
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=db-constructwagons
+      - DB_PORT=5432
+      - DB_NAME=constructwagons
+      - DB_USER=admin
+      - DB_PASSWORD=password
+      - KAFKA_BROKER=kafka:29092
+      - JWT_SECRET=your_jwt_secret_key_here
+      - COMPANY=ConstructWagons
+    depends_on:
+      - db-constructwagons
+      - kafka
+
+volumes:
+  db_data_wagonlits:
+  db_data_devmateriels:
+  db_data_constructwagons:
