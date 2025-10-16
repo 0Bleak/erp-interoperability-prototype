@@ -23,7 +23,6 @@ app.get('/api/health', (req, res) => {
 const initializeService = async () => {
   await initDatabase();
 
-  // ✅ Subscribe to multiple topics with a single consumer
   const handlers = {
     'order.request': async (message) => {
       if (message.to === 'DevMateriels') {
@@ -35,7 +34,7 @@ const initializeService = async () => {
         );
         
         if (existingOrder.rows.length > 0) {
-          console.log(`⚠️  Order with external_order_id ${message.orderId} already exists, skipping...`);
+          console.log(`Order with external_order_id ${message.orderId} already exists, skipping...`);
           return;
         }
         
@@ -52,7 +51,7 @@ const initializeService = async () => {
           ['order.request', message, 'in']
         );
 
-        console.log(`✅ Received order request: ${order.id}`);
+        console.log(`Received order request: ${order.id}`);
       }
     },
     
@@ -87,7 +86,7 @@ const initializeService = async () => {
           ['order.status.update', statusUpdate, 'out']
         );
 
-        console.log(`✅ Order ${message.orderId} confirmed and work started`);
+        console.log(`Order ${message.orderId} confirmed and work started`);
       }
     }
   };

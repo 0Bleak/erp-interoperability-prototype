@@ -46,7 +46,7 @@ router.post('/:id/quote', roleMiddleware(['commercial', 'admin']), async (req, r
       event: 'order.quote',
       from: req.user.company,
       to: order.client_company,
-      orderId: parseInt(order.external_order_id) || order.id,  // ✅ Convert to NUMBER
+      orderId: parseInt(order.external_order_id) || order.id,  
       estimatedCost: parseFloat(estimatedCost),
       estimatedDelivery: estimatedDelivery,
       timestamp: new Date().toISOString()
@@ -84,7 +84,7 @@ router.post('/:id/complete', roleMiddleware(['technician', 'admin']), async (req
       event: 'order.status.update',
       from: req.user.company,
       to: order.client_company,
-      orderId: parseInt(order.external_order_id) || order.id,  // ✅ Convert to NUMBER
+      orderId: parseInt(order.external_order_id) || order.id,  
       status: 'completed',
       message: 'Repair work completed',
       timestamp: new Date().toISOString()

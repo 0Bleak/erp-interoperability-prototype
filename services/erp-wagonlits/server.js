@@ -35,7 +35,7 @@ const initializeService = async () => {
           'INSERT INTO messages (topic, payload, direction) VALUES ($1, $2, $3)',
           ['order.quote', message, 'in']
         );
-        console.log(`✅ Received quote for order ${message.orderId}`);
+        console.log(`Received quote for order ${message.orderId}`);
       }
     },
     
@@ -50,7 +50,7 @@ const initializeService = async () => {
           'INSERT INTO messages (topic, payload, direction) VALUES ($1, $2, $3)',
           ['order.status.update', message, 'in']
         );
-        console.log(`✅ Order ${message.orderId} status updated to ${message.status}`);
+        console.log(`Order ${message.orderId} status updated to ${message.status}`);
       }
     }
   };

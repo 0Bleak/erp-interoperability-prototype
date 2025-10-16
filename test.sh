@@ -1,4 +1,3 @@
-#!/bin/bash
 
 echo "=================================================="
 echo "ERP INTEROPERABILITY SYSTEM - COMPLETE TEST SCRIPT"
@@ -299,7 +298,7 @@ final_verification() {
         echo -e "${GREEN}✓ Role-based access control${NC}"
         echo -e "${GREEN}✓ Complete business flow implemented${NC}"
     else
-        echo -e "\n${RED}❌ Some issues detected - check the logs above${NC}"
+        echo -e "\n${RED}Some issues detected - check the logs above${NC}"
         exit 1
     fi
 }

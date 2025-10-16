@@ -8,7 +8,6 @@ RUN npm install
 
 COPY services/erp-devmateriels/ ./
 
-# Copy shared files
 COPY shared/ ./shared/
 
 EXPOSE 3000
