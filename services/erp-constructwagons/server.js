@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const { initDatabase } = require('/app/shared/database');
 const { subscribeToMultipleTopics, sendMessage } = require('/app/shared/kafka');
+const { register, metricsMiddleware } = require('/app/shared/metrics');
 
 const authRoutes = require('./routes/auth');
 const orderRoutes = require('./routes/orders');
@@ -12,12 +13,22 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+app.use(metricsMiddleware);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', service: 'ConstructWagons ERP' });
+});
+
+app.get('/metrics', async (req, res) => {
+  try {
+    res.set('Content-Type', register.contentType);
+    res.end(await register.metrics());
+  } catch (error) {
+    res.status(500).end(error);
+  }
 });
 
 const initializeService = async () => {

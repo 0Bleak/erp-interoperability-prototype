@@ -1,0 +1,309 @@
+# ERP Interoperability Prototype
+
+A microservices-based ERP system demonstrating inter-company communication using **Kafka event streaming** (not webhooks - this is a superior architecture for microservices).
+
+##  Architecture
+
+- **3 ERP Services**: WagonLits, DevMateriels, ConstructWagons
+- **Event Streaming**: Apache Kafka (event-driven, not webhook-based)
+- **Databases**: PostgreSQL (one per service)
+- **Monitoring**: Prometheus + Grafana + cAdvisor
+- **CI/CD**: GitHub Actions
+
+### Why Kafka instead of Webhooks?
+
+This system uses **Kafka event-driven messaging** which provides:
+-  Persistent message storage
+-  Automatic retry logic
+-  Decoupled services
+-  Better scalability
+-  Message ordering guarantees
+-  No need for webhook registration/management
+
+Webhooks would require services to expose HTTP endpoints and manage callback URLs, making the system more fragile and coupled.
+
+##  Quick Start
+
+### Prerequisites
+
+- Docker & Docker Compose
+- Git
+- Bash (for test script)
+
+
+
+##  Access Points
+
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| **WagonLits ERP** | http://localhost:3001 | person1.WagonLits@gmail.com / password |
+| **DevMateriels ERP** | http://localhost:3002 | person1.DevMateriels@gmail.com / password |
+| **ConstructWagons ERP** | http://localhost:3003 | person1.ConstructWagons@gmail.com / password |
+| **Kafka UI** | http://localhost:8080 | - |
+| **Grafana** | http://localhost:3000 | admin / admin123 |
+| **Prometheus** | http://localhost:9090 | - |
+| **cAdvisor** | http://localhost:8081 | - |
+
+##  Monitoring
+
+### Accessing Grafana
+
+1. Open http://localhost:3000
+2. Login with `admin` / `admin123`
+3. Navigate to Dashboards → ERP Services Monitoring
+
+### Available Metrics
+
+- **Container Resources**: CPU usage, Memory usage
+- **HTTP Requests**: Request rate, duration, status codes
+- **Kafka Messages**: Producer/consumer throughput
+- **Service Health**: Up/down status of all services
+- **System Resources**: Node metrics (CPU, disk, network)
+
+### Prometheus Targets
+
+Access http://localhost:9090/targets to see all monitored services:
+- ERP services (with `/metrics` endpoint)
+- Node exporter (system metrics)
+- cAdvisor (container metrics)
+
+##  CI/CD Pipeline
+
+### GitHub Actions Workflow
+
+The CI/CD pipeline automatically runs on every push and pull request:
+
+1. **Health Checks**: Verifies all services are running
+2. **Integration Tests**: Runs full order flow tests
+3. **Build**: Builds Docker images on main branch
+
+### Running CI/CD Locally
+```bash
+docker-compose up -d
+sleep 45
+./test.sh
+docker-compose down -v
+```
+
+### Status Badge
+
+Add to your GitHub README:
+```markdown
+![CI/CD](https://github.com/0Bleak/erp-interoperability-prototype/workflows/CI%2FCD%20Pipeline/badge.svg)
+```
+
+##  Testing
+
+### Manual API Testing
+```bash
+# Login to WagonLits
+curl -X POST http://localhost:3001/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"person1.WagonLits@gmail.com","password":"password"}'
+
+# Create an order
+curl -X POST http://localhost:3001/api/orders \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "description": "Brake repair needed",
+    "urgency": "high",
+    "assigned_company": "DevMateriels"
+  }'
+
+# Check metrics
+curl http://localhost:3001/metrics
+```
+
+### Automated Testing
+```bash
+# Run full test suite
+./test.sh
+
+# View test output with colors
+TERM=xterm-256color ./test.sh
+```
+
+##  Project Structure
+```
+.
+├── .github/
+│   └── workflows/
+│       └── ci.yml                    # CI/CD pipeline
+├── services/
+│   ├── erp-wagonlits/
+│   │   ├── routes/
+│   │   │   ├── auth.js
+│   │   │   └── orders.js
+│   │   ├── Dockerfile
+│   │   ├── package.json
+│   │   └── server.js                # Metrics endpoint added
+│   ├── erp-devmateriels/
+│   │   ├── routes/
+│   │   │   ├── auth.js
+│   │   │   └── orders.js
+│   │   ├── Dockerfile
+│   │   ├── package.json
+│   │   └── server.js                # Metrics endpoint added
+│   └── erp-constructwagons/
+│       ├── routes/
+│       │   ├── auth.js
+│       │   └── orders.js
+│       ├── Dockerfile
+│       ├── package.json
+│       └── server.js                # Metrics endpoint added
+├── shared/
+│   ├── auth.js
+│   ├── database.js
+│   ├── kafka.js                     # Kafka metrics tracking added
+│   ├── metrics.js                   # NEW: Prometheus metrics
+│   └── scripts/
+│       └── init-databases.sql
+├── monitoring/                       # NEW: Monitoring configs
+│   ├── prometheus.yml
+│   └── grafana/
+│       ├── dashboards/
+│       │   ├── dashboard.yml
+│       │   └── erp-dashboard.json
+│       └── datasources/
+│           └── datasource.yml
+├── docker-compose.yml               # Monitoring services added
+├── test.sh
+└── README.md
+```
+
+##  Development
+
+### View Logs
+```bash
+docker-compose logs -f
+
+docker-compose logs -f erp-wagonlits
+docker-compose logs -f prometheus
+docker-compose logs -f grafana
+```
+
+### Restart a Service
+```bash
+docker-compose restart erp-devmateriels
+
+docker-compose up -d --build erp-wagonlits
+```
+
+### Database Access
+```bash
+docker-compose exec db-wagonlits psql -U admin -d wagonlits
+
+docker-compose exec db-wagonlits psql -U admin -d wagonlits -c "SELECT * FROM orders;"
+
+docker-compose exec db-devmateriels psql -U admin -d devmateriels -c "SELECT * FROM messages;"
+```
+
+### Clean Everything
+```bash
+docker-compose down -v
+
+docker-compose down -v --rmi all
+
+docker-compose up -d --build
+```
+
+##  Security Notes
+
+**For Production:**
+
+1. Change default passwords in `docker-compose.yml`:
+   - PostgreSQL: `POSTGRES_PASSWORD`
+   - Grafana: `GF_SECURITY_ADMIN_PASSWORD`
+   - JWT: `JWT_SECRET`
+
+2. Use environment variables:
+```bash
+   export DB_PASSWORD=your_secure_password
+   export JWT_SECRET=your_secure_secret
+```
+
+3. Enable TLS for Kafka and databases
+
+4. Implement rate limiting on API endpoints
+
+##  Performance Tuning
+
+### Kafka
+```yaml
+KAFKA_NUM_PARTITIONS: 3
+KAFKA_DEFAULT_REPLICATION_FACTOR: 2
+```
+
+### PostgreSQL
+```yaml
+command: postgres -c max_connections=200 -c shared_buffers=256MB
+```
+
+### Prometheus
+```yaml
+command:
+  - '--storage.tsdb.retention.time=30d'
+```
+
+##  Troubleshooting
+
+### Services not starting
+```bash
+docker-compose ps
+
+docker-compose logs erp-wagonlits
+
+docker network ls
+docker network inspect erp-interoperability-prototype_default
+```
+
+### Kafka connection issues
+```bash
+docker-compose logs kafka
+
+docker-compose exec kafka kafka-topics --list --bootstrap-server localhost:9092
+
+docker-compose exec kafka kafka-broker-api-versions --bootstrap-server localhost:9092
+```
+
+### Grafana dashboard not loading
+```bash
+curl http://localhost:9090/api/v1/targets
+
+curl http://localhost:3000/api/datasources
+
+docker-compose restart grafana
+```
+
+### Metrics not appearing
+```bash
+curl http://localhost:3001/metrics
+curl http://localhost:3002/metrics
+curl http://localhost:3003/metrics
+
+docker-compose exec prometheus cat /etc/prometheus/prometheus.yml
+```
+
+##  Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+##  License
+
+MIT License - see LICENSE file for details
+
+##  Authors
+
+- **0Bleak** - Initial work - [GitHub](https://github.com/0Bleak)
+
+##  Acknowledgments
+
+- Kafka for event streaming
+- Prometheus & Grafana for monitoring
+- Docker for containerization
+- PostgreSQL for data persistence

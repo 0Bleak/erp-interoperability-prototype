@@ -1,5 +1,16 @@
 const { Kafka } = require('kafkajs');
 
+let kafkaMessagesProduced, kafkaMessagesConsumed;
+
+try {
+  const metrics = require('./metrics');
+  kafkaMessagesProduced = metrics.kafkaMessagesProduced;
+  kafkaMessagesConsumed = metrics.kafkaMessagesConsumed;
+} catch (error) {
+  kafkaMessagesProduced = { labels: () => ({ inc: () => {} }) };
+  kafkaMessagesConsumed = { labels: () => ({ inc: () => {} }) };
+}
+
 const kafka = new Kafka({
   clientId: 'erp-microservice',
   brokers: [process.env.KAFKA_BROKER || 'localhost:9092']
@@ -31,6 +42,7 @@ const sendMessage = async (topic, message) => {
         { value: JSON.stringify(message) }
       ]
     });
+    kafkaMessagesProduced.labels(topic).inc();
     console.log(`Message sent to topic ${topic}:`, message);
   } catch (error) {
     console.error('Error sending message to Kafka:', error);
@@ -53,6 +65,7 @@ const subscribeToTopic = async (topic, callback) => {
         try {
           const value = JSON.parse(message.value.toString());
           console.log(`Received message from topic ${topic}:`, value);
+          kafkaMessagesConsumed.labels(topic).inc();
           await callback(value);
         } catch (error) {
           console.error('Error processing Kafka message:', error);
@@ -96,6 +109,8 @@ const subscribeToMultipleTopics = async (handlers) => {
         try {
           const value = JSON.parse(message.value.toString());
           console.log(`Received message from topic ${topic}:`, value);
+          
+          kafkaMessagesConsumed.labels(topic).inc();
           
           const handler = handlers[topic];
           if (handler) {
