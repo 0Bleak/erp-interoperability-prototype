@@ -111,6 +111,7 @@ services:
       - DB_PASSWORD=password
       - KAFKA_BROKER=kafka:29092
       - JWT_SECRET=your_jwt_secret_key_here
+      - MESSAGE_SECRET=your_secure_message_secret_key_12345
       - COMPANY=WagonLits
     depends_on:
       db-wagonlits:
@@ -139,6 +140,7 @@ services:
       - DB_PASSWORD=password
       - KAFKA_BROKER=kafka:29092
       - JWT_SECRET=your_jwt_secret_key_here
+      - MESSAGE_SECRET=your_secure_message_secret_key_12345
       - COMPANY=DevMateriels
     depends_on:
       db-devmateriels:
@@ -167,6 +169,7 @@ services:
       - DB_PASSWORD=password
       - KAFKA_BROKER=kafka:29092
       - JWT_SECRET=your_jwt_secret_key_here
+      - MESSAGE_SECRET=your_secure_message_secret_key_12345
       - COMPANY=ConstructWagons
     depends_on:
       db-constructwagons:
