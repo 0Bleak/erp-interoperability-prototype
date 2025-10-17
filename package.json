@@ -1,0 +1,12 @@
+{
+  "name": "erp-interoperability-prototype",
+  "version": "1.0.0",
+  "description": "ERP Interoperability System with Kafka",
+  "scripts": {
+    "health-check": "node health-check.js",
+    "test": "node health-check.js"
+  },
+  "keywords": ["erp", "kafka", "microservices"],
+  "author": "",
+  "license": "MIT"
+}
